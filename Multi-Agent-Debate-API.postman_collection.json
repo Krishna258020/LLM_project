@@ -1,0 +1,343 @@
+{
+  "info": {
+    "name": "Multi-Agent LLM Debate System API",
+    "description": "Complete API collection for the Multi-Agent Debate System",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8001",
+      "type": "string"
+    },
+    {
+      "key": "token",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Authentication",
+      "item": [
+        {
+          "name": "Register User",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"testuser\",\n  \"email\": \"test@example.com\",\n  \"password\": \"password123\",\n  \"role\": \"user\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "register"]
+            }
+          }
+        },
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/x-www-form-urlencoded"
+              }
+            ],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "username",
+                  "value": "testuser"
+                },
+                {
+                  "key": "password",
+                  "value": "password123"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "login"]
+            }
+          }
+        },
+        {
+          "name": "Get Current User",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "me"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Debates",
+      "item": [
+        {
+          "name": "Create Debate",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"prompt\": \"What are the benefits of renewable energy?\",\n  \"category\": \"Technical\",\n  \"tags\": [\"energy\", \"environment\", \"sustainability\"]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/debate",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "debate"]
+            }
+          }
+        },
+        {
+          "name": "Get All Debates",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/debates",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "debates"]
+            }
+          }
+        },
+        {
+          "name": "Update Debate",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"category\": \"Technical\",\n  \"tags\": [\"AI\", \"ML\"],\n  \"is_favorite\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/debates/:debateId",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "debates", ":debateId"],
+              "variable": [
+                {
+                  "key": "debateId",
+                  "value": ""
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Favorite Debates",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/debates/favorites",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "debates", "favorites"]
+            }
+          }
+        },
+        {
+          "name": "Get Categories",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/categories",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "categories"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Templates",
+      "item": [
+        {
+          "name": "Get All Templates",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/templates",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "templates"]
+            }
+          }
+        },
+        {
+          "name": "Create Template",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Custom Template\",\n  \"description\": \"My custom debate template\",\n  \"prompt_template\": \"Analyze [TOPIC] and provide insights\",\n  \"category\": \"Analysis\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/templates",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "templates"]
+            }
+          }
+        },
+        {
+          "name": "Use Template",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/api/templates/:templateId/use",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "templates", ":templateId", "use"],
+              "variable": [
+                {
+                  "key": "templateId",
+                  "value": ""
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Analytics",
+      "item": [
+        {
+          "name": "Get Performance Trends",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/analytics/trends",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "analytics", "trends"]
+            }
+          }
+        },
+        {
+          "name": "Get Quality Scores",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/ai-insights/quality-scores",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "ai-insights", "quality-scores"]
+            }
+          }
+        },
+        {
+          "name": "Get Topic Clusters",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/ai-insights/topic-clusters",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "ai-insights", "topic-clusters"]
+            }
+          }
+        },
+        {
+          "name": "Get Sentiment Analysis",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/ai-insights/sentiment-analysis",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "ai-insights", "sentiment-analysis"]
+            }
+          }
+        },
+        {
+          "name": "Get Recommendations",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/ai-insights/recommendations",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "ai-insights", "recommendations"]
+            }
+          }
+        },
+        {
+          "name": "Get Performance Metrics",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/ai-insights/performance-metrics",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "ai-insights", "performance-metrics"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/health",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "health"]
+            }
+          }
+        },
+        {
+          "name": "API Root",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", ""]
+            }
+          }
+        },
+        {
+          "name": "Test CORS",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/test-cors",
+              "host": ["{{baseUrl}}"],
+              "path": ["test-cors"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
