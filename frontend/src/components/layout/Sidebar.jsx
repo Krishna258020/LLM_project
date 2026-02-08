@@ -2,12 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { Home, Sparkles, BookOpen, BarChart3, Settings, Activity, FileText, LogOut } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
+import { useTheme } from '../../contexts/ThemeContext';
 import axios from 'axios';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8001';
 
 const Sidebar = () => {
   const { user, logout } = useAuth();
+  const { isDark } = useTheme();
   const navigate = useNavigate();
   const [systemHealth, setSystemHealth] = useState(null);
   
@@ -48,16 +50,16 @@ const Sidebar = () => {
     : 0;
 
   return (
-    <div className="w-64 h-screen bg-gray-50 border-r border-gray-200 flex flex-col">
+    <div className={`w-64 h-screen ${isDark ? 'bg-gray-800 border-gray-700' : 'bg-gray-50 border-gray-200'} border-r flex flex-col`}>
       {/* Logo */}
-      <div className="p-6 border-b border-gray-200">
+      <div className={`p-6 border-b ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 bg-indigo-600 rounded-lg flex items-center justify-center">
             <Activity className="w-6 h-6 text-white" />
           </div>
           <div>
-            <h1 className="text-xl font-bold text-gray-900">DebateOS</h1>
-            <p className="text-xs text-gray-500">Multi-Agent System</p>
+            <h1 className={`text-xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>DebateOS</h1>
+            <p className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Multi-Agent System</p>
           </div>
         </div>
       </div>
@@ -73,7 +75,9 @@ const Sidebar = () => {
               `flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
                 isActive
                   ? 'bg-indigo-50 text-indigo-600'
-                  : 'text-gray-700 hover:bg-gray-100'
+                  : isDark 
+                    ? 'text-gray-300 hover:bg-gray-700' 
+                    : 'text-gray-700 hover:bg-gray-100'
               }`
             }
           >
@@ -84,15 +88,15 @@ const Sidebar = () => {
       </nav>
 
       {/* System Status */}
-      <div className="p-4 border-t border-gray-200">
-        <div className="text-xs font-semibold text-gray-500 uppercase mb-3">
+      <div className={`p-4 border-t ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
+        <div className={`text-xs font-semibold uppercase mb-3 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
           System Status
         </div>
         <div className="space-y-2">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <div className={`w-2 h-2 rounded-full ${ollamaStatus ? 'bg-green-500' : 'bg-red-500'}`}></div>
-              <span className="text-sm text-gray-600">Ollama</span>
+              <span className={`text-sm ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>Ollama</span>
             </div>
             <span className={`text-xs font-medium ${ollamaStatus ? 'text-green-600' : 'text-red-600'}`}>
               {ollamaStatus ? 'Online' : 'Offline'}
@@ -101,7 +105,7 @@ const Sidebar = () => {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <div className={`w-2 h-2 rounded-full ${dbStatus ? 'bg-blue-500' : 'bg-red-500'}`}></div>
-              <span className="text-sm text-gray-600">Database</span>
+              <span className={`text-sm ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>Database</span>
             </div>
             <span className={`text-xs font-medium ${dbStatus ? 'text-blue-600' : 'text-red-600'}`}>
               {dbStatus ? 'Connected' : 'Disconnected'}
@@ -110,7 +114,7 @@ const Sidebar = () => {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <div className={`w-2 h-2 rounded-full ${modelsCount === 3 ? 'bg-purple-500' : 'bg-yellow-500'}`}></div>
-              <span className="text-sm text-gray-600">Models</span>
+              <span className={`text-sm ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>Models</span>
             </div>
             <span className={`text-xs font-medium ${modelsCount === 3 ? 'text-purple-600' : 'text-yellow-600'}`}>
               {modelsCount}/3
@@ -120,7 +124,7 @@ const Sidebar = () => {
       </div>
 
       {/* User Profile */}
-      <div className="p-4 border-t border-gray-200">
+      <div className={`p-4 border-t ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
         <div className="flex items-center gap-3 mb-3">
           <div className="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center">
             <span className="text-sm font-semibold text-indigo-600">
@@ -128,10 +132,10 @@ const Sidebar = () => {
             </span>
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-gray-900 truncate">
+            <p className={`text-sm font-medium truncate ${isDark ? 'text-white' : 'text-gray-900'}`}>
               {user?.username || 'User'}
             </p>
-            <p className="text-xs text-gray-500 truncate">
+            <p className={`text-xs truncate ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
               {user?.email || 'user@example.com'}
             </p>
           </div>

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Clock, MessageSquare, Trash2, Download, RefreshCw } from 'lucide-react';
+import { Search, Clock, MessageSquare, Trash2, Download, RefreshCw, Star } from 'lucide-react';
 import axios from 'axios';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8001';
@@ -11,6 +11,7 @@ const History = () => {
   const [selectedDebate, setSelectedDebate] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
 
   useEffect(() => {
     loadDebates();
@@ -40,9 +41,29 @@ const History = () => {
     link.click();
   };
 
-  const filteredDebates = debates.filter(debate =>
-    debate.prompt.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const toggleFavorite = async (debateId, currentFavoriteStatus) => {
+    try {
+      await axios.patch(`${API}/debates/${debateId}`, {
+        is_favorite: !currentFavoriteStatus
+      });
+      // Update local state
+      setDebates(debates.map(d => 
+        d.id === debateId ? { ...d, is_favorite: !currentFavoriteStatus } : d
+      ));
+      if (selectedDebate && selectedDebate.id === debateId) {
+        setSelectedDebate({ ...selectedDebate, is_favorite: !currentFavoriteStatus });
+      }
+    } catch (error) {
+      console.error('Failed to toggle favorite:', error);
+      alert('Failed to update favorite status');
+    }
+  };
+
+  const filteredDebates = debates.filter(debate => {
+    const matchesSearch = debate.prompt.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesFavorite = !showFavoritesOnly || debate.is_favorite;
+    return matchesSearch && matchesFavorite;
+  });
 
   return (
     <div className="p-8">
@@ -63,19 +84,33 @@ const History = () => {
 
       {/* Search */}
       <div className="mb-6">
-        <div className="relative">
-          <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-          <input
-            type="text"
-            placeholder="Search debates by question..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent shadow-sm"
-          />
+        <div className="flex gap-4 mb-3">
+          <div className="relative flex-1">
+            <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Search debates by question..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent shadow-sm"
+            />
+          </div>
+          <button
+            onClick={() => setShowFavoritesOnly(!showFavoritesOnly)}
+            className={`flex items-center gap-2 px-6 py-3 rounded-xl transition-colors shadow-sm border ${
+              showFavoritesOnly
+                ? 'bg-yellow-50 border-yellow-300 text-yellow-700'
+                : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
+            }`}
+          >
+            <Star className={`w-5 h-5 ${showFavoritesOnly ? 'fill-yellow-500' : ''}`} />
+            <span className="font-medium">Favorites</span>
+          </button>
         </div>
         {filteredDebates.length > 0 && (
-          <div className="mt-2 text-sm text-gray-500">
+          <div className="text-sm text-gray-500">
             Showing {filteredDebates.length} of {debates.length} debates
+            {showFavoritesOnly && ' (favorites only)'}
           </div>
         )}
       </div>
@@ -106,9 +141,14 @@ const History = () => {
               >
                 <div className="flex items-start justify-between">
                   <div className="flex-1" onClick={() => setSelectedDebate(debate)}>
-                    <h3 className="text-lg font-semibold text-gray-900 mb-2 group-hover:text-indigo-600 transition-colors">
-                      {debate.prompt}
-                    </h3>
+                    <div className="flex items-center gap-2 mb-2">
+                      <h3 className="text-lg font-semibold text-gray-900 group-hover:text-indigo-600 transition-colors">
+                        {debate.prompt}
+                      </h3>
+                      {debate.is_favorite && (
+                        <Star className="w-5 h-5 text-yellow-500 fill-yellow-500" />
+                      )}
+                    </div>
                     <div className="flex items-center gap-4 text-sm text-gray-500">
                       <div className="flex items-center gap-1">
                         <MessageSquare className="w-4 h-4" />
@@ -120,16 +160,32 @@ const History = () => {
                       </div>
                     </div>
                   </div>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      exportDebate(debate);
-                    }}
-                    className="ml-4 p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
-                    title="Export debate"
-                  >
-                    <Download className="w-5 h-5" />
-                  </button>
+                  <div className="flex items-center gap-2 ml-4">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggleFavorite(debate.id, debate.is_favorite);
+                      }}
+                      className={`p-2 rounded-lg transition-colors ${
+                        debate.is_favorite
+                          ? 'text-yellow-500 hover:bg-yellow-50'
+                          : 'text-gray-400 hover:text-yellow-500 hover:bg-yellow-50'
+                      }`}
+                      title={debate.is_favorite ? 'Remove from favorites' : 'Add to favorites'}
+                    >
+                      <Star className={`w-5 h-5 ${debate.is_favorite ? 'fill-yellow-500' : ''}`} />
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        exportDebate(debate);
+                      }}
+                      className="p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                      title="Export debate"
+                    >
+                      <Download className="w-5 h-5" />
+                    </button>
+                  </div>
                 </div>
               </div>
             ))
@@ -158,9 +214,25 @@ const History = () => {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="sticky top-0 bg-white border-b border-gray-200 p-6 rounded-t-2xl">
-              <h2 className="text-2xl font-bold text-gray-900 mb-2">
-                {selectedDebate.prompt}
-              </h2>
+              <div className="flex items-start justify-between mb-2">
+                <h2 className="text-2xl font-bold text-gray-900 flex-1">
+                  {selectedDebate.prompt}
+                </h2>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    toggleFavorite(selectedDebate.id, selectedDebate.is_favorite);
+                  }}
+                  className={`p-2 rounded-lg transition-colors ${
+                    selectedDebate.is_favorite
+                      ? 'text-yellow-500 hover:bg-yellow-50'
+                      : 'text-gray-400 hover:text-yellow-500 hover:bg-yellow-50'
+                  }`}
+                  title={selectedDebate.is_favorite ? 'Remove from favorites' : 'Add to favorites'}
+                >
+                  <Star className={`w-6 h-6 ${selectedDebate.is_favorite ? 'fill-yellow-500' : ''}`} />
+                </button>
+              </div>
               <div className="flex items-center gap-4 text-sm text-gray-500">
                 <div className="flex items-center gap-1">
                   <Clock className="w-4 h-4" />
@@ -170,6 +242,12 @@ const History = () => {
                   <MessageSquare className="w-4 h-4" />
                   <span>{selectedDebate.steps.length} steps</span>
                 </div>
+                {selectedDebate.is_favorite && (
+                  <div className="flex items-center gap-1 text-yellow-600">
+                    <Star className="w-4 h-4 fill-yellow-500" />
+                    <span>Favorite</span>
+                  </div>
+                )}
               </div>
             </div>
 
