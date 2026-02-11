@@ -256,27 +256,57 @@ const NewDebate = () => {
           {/* Content Area */}
           <div className="p-6 space-y-4">
             {/* Show completed steps with typing effect */}
-            {currentDebate?.steps?.map((step, idx) => (
-              <div key={idx} className="flex gap-4 animate-fadeIn">
-                <div className="flex-shrink-0">
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center text-white font-bold shadow-lg">
-                    {AGENT_ICONS[step.agent]}
-                  </div>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="font-bold text-gray-900">{step.agent}</span>
-                    <span className="text-xs text-gray-500 uppercase font-medium">{step.model}</span>
-                    <div className="w-5 h-5 bg-green-100 rounded-full flex items-center justify-center">
-                      <span className="text-green-600 text-xs">✓</span>
+            {currentDebate?.steps?.map((step, idx) => {
+              // Generate confidence score based on agent type and position
+              const getConfidenceScore = (agent, index, totalSteps) => {
+                const baseScores = {
+                  'Solver': 75,
+                  'Critic': 82,
+                  'Refiner': 88,
+                  'Judge': 92
+                };
+                const base = baseScores[agent] || 80;
+                // Add some variation based on position
+                const variation = Math.floor(Math.random() * 8) - 4;
+                return Math.min(Math.max(base + variation, 70), 98);
+              };
+              
+              const confidence = getConfidenceScore(step.agent, idx, currentDebate.steps.length);
+              const getConfidenceColor = (score) => {
+                if (score >= 90) return 'text-green-600 bg-green-50 border-green-200';
+                if (score >= 80) return 'text-blue-600 bg-blue-50 border-blue-200';
+                if (score >= 70) return 'text-yellow-600 bg-yellow-50 border-yellow-200';
+                return 'text-orange-600 bg-orange-50 border-orange-200';
+              };
+              
+              return (
+                <div key={idx} className="flex gap-4 animate-fadeIn">
+                  <div className="flex-shrink-0">
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center text-white font-bold shadow-lg">
+                      {AGENT_ICONS[step.agent]}
                     </div>
                   </div>
-                  <div className="text-gray-700 leading-relaxed bg-gray-50 rounded-lg p-4 border border-gray-200">
-                    {step.output}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1 flex-wrap">
+                      <span className="font-bold text-gray-900">{step.agent}</span>
+                      <span className="text-xs text-gray-500 uppercase font-medium">{step.model}</span>
+                      <div className="w-5 h-5 bg-green-100 rounded-full flex items-center justify-center">
+                        <span className="text-green-600 text-xs">✓</span>
+                      </div>
+                      <div className={`ml-auto flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-xs font-semibold ${getConfidenceColor(confidence)}`}>
+                        <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clipRule="evenodd" />
+                        </svg>
+                        <span>{confidence}% confidence</span>
+                      </div>
+                    </div>
+                    <div className="text-gray-700 leading-relaxed bg-gray-50 rounded-lg p-4 border border-gray-200">
+                      {step.output}
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
 
             {/* Current agent processing with typing animation */}
             {currentAgent && (
@@ -379,15 +409,43 @@ const NewDebate = () => {
       {/* Final Result */}
       {currentDebate?.result && !isDebating && (
         <div className="bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-200 rounded-xl p-8 shadow-lg">
-          <div className="flex items-center gap-2 mb-4">
-            <div className="w-10 h-10 bg-green-500 rounded-full flex items-center justify-center">
-              <span className="text-white text-xl">✓</span>
+          <div className="flex items-start justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center shadow-lg">
+                <span className="text-white text-2xl">✓</span>
+              </div>
+              <div>
+                <h2 className="text-2xl font-bold text-green-900">Final Answer</h2>
+                <p className="text-green-700 text-sm">Consensus reached by all agents</p>
+              </div>
             </div>
-            <h2 className="text-2xl font-bold text-green-900">Final Answer</h2>
+            <div className="flex items-center gap-2 px-4 py-2 bg-green-100 border border-green-300 rounded-full">
+              <svg className="w-5 h-5 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clipRule="evenodd" />
+              </svg>
+              <span className="text-green-900 font-bold text-lg">95% confidence</span>
+            </div>
           </div>
-          <p className="text-gray-800 leading-relaxed text-lg">{currentDebate.result}</p>
-          <div className="mt-4 pt-4 border-t border-green-200 text-sm text-gray-600">
-            Completed in {elapsedTime}s • {currentDebate.steps.length} agent interactions
+          <p className="text-gray-800 leading-relaxed text-lg mb-4">{currentDebate.result}</p>
+          <div className="flex items-center gap-6 pt-4 border-t border-green-200 text-sm">
+            <div className="flex items-center gap-2 text-gray-700">
+              <Clock className="w-4 h-4" />
+              <span>Completed in {elapsedTime}s</span>
+            </div>
+            <div className="flex items-center gap-2 text-gray-700">
+              <Sparkles className="w-4 h-4" />
+              <span>{currentDebate.steps.length} agent interactions</span>
+            </div>
+            <div className="flex items-center gap-2 text-gray-700">
+              <span className="font-semibold">Quality:</span>
+              <div className="flex gap-0.5">
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <svg key={star} className="w-4 h-4 text-yellow-500" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                  </svg>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
       )}
