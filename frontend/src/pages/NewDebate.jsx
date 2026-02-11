@@ -30,6 +30,8 @@ const NewDebate = () => {
   const [startTime, setStartTime] = useState(null);
   const [elapsedTime, setElapsedTime] = useState(0);
   const [templateLoaded, setTemplateLoaded] = useState(false);
+  const [currentAgent, setCurrentAgent] = useState(null);
+  const [loadingModel, setLoadingModel] = useState(null);
 
   // Load template prompt if coming from Templates page - only once
   useEffect(() => {
@@ -60,18 +62,47 @@ const NewDebate = () => {
     setCurrentDebate({ steps: [], result: null });
     setStartTime(Date.now());
     setElapsedTime(0);
+    setCurrentAgent(null);
+    setLoadingModel(null);
 
     try {
-      const response = await axios.post(`${API}/debate`, { 
+      // Simulate loading sequence for better UX
+      const agentSequence = [
+        { agent: 'Solver', model: 'mistral', icon: '🧠' },
+        { agent: 'Critic', model: 'phi3', icon: '🔍' },
+        { agent: 'Refiner', model: 'llama3.1', icon: '✨' },
+        { agent: 'Judge', model: 'mistral', icon: '⚖️' }
+      ];
+
+      let currentStepIndex = 0;
+
+      // Start the debate request
+      const debatePromise = axios.post(`${API}/debate`, { 
         prompt,
         category: category.trim() || null,
         tags: tags.trim() ? tags.split(',').map(t => t.trim()).filter(t => t) : []
       }, {
         timeout: 120000 // 2 minute timeout
       });
+
+      // Simulate agent loading states
+      const loadingInterval = setInterval(() => {
+        if (currentStepIndex < agentSequence.length) {
+          const current = agentSequence[currentStepIndex];
+          setCurrentAgent(current.agent);
+          setLoadingModel(current.model);
+          currentStepIndex++;
+        }
+      }, 3000); // Update every 3 seconds
+
+      const response = await debatePromise;
+      clearInterval(loadingInterval);
+      
       const { result, steps } = response.data;
 
       setCurrentDebate({ steps, result });
+      setCurrentAgent(null);
+      setLoadingModel(null);
     } catch (err) {
       console.error('Debate error:', err);
       let errorMessage = 'Failed to run debate';
@@ -85,6 +116,8 @@ const NewDebate = () => {
       }
       
       setError(errorMessage);
+      setCurrentAgent(null);
+      setLoadingModel(null);
     } finally {
       setIsDebating(false);
     }
@@ -197,6 +230,98 @@ const NewDebate = () => {
       {error && (
         <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-6">
           <p className="text-red-800">{error}</p>
+        </div>
+      )}
+
+      {/* Loading Animation - Agent Pipeline */}
+      {isDebating && (
+        <div className="bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 border-2 border-indigo-200 rounded-2xl p-8 mb-6 shadow-xl">
+          <div className="text-center mb-8">
+            <h3 className="text-2xl font-bold text-indigo-900 mb-2">
+              Multi-Agent Debate in Progress
+            </h3>
+            <div className="flex items-center justify-center gap-2 mb-4">
+              <Clock className="w-5 h-5 text-indigo-600" />
+              <span className="text-indigo-700 font-medium">{elapsedTime}s elapsed</span>
+            </div>
+          </div>
+
+          {/* Agent Pipeline */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+            {[
+              { agent: 'Solver', model: 'mistral', icon: '🧠', color: 'indigo' },
+              { agent: 'Critic', model: 'phi3', icon: '🔍', color: 'amber' },
+              { agent: 'Refiner', model: 'llama3.1', icon: '✨', color: 'purple' },
+              { agent: 'Judge', model: 'mistral', icon: '⚖️', color: 'green' }
+            ].map((agentInfo, idx) => {
+              const isActive = currentAgent === agentInfo.agent;
+              const isCompleted = currentDebate?.steps?.some(step => step.agent === agentInfo.agent);
+              
+              return (
+                <div
+                  key={agentInfo.agent}
+                  className={`relative p-6 rounded-xl border-2 transition-all duration-500 ${
+                    isActive
+                      ? `bg-${agentInfo.color}-100 border-${agentInfo.color}-400 shadow-lg scale-105`
+                      : isCompleted
+                      ? `bg-${agentInfo.color}-50 border-${agentInfo.color}-300`
+                      : 'bg-white border-gray-200 opacity-50'
+                  }`}
+                >
+                  {/* Completion Check */}
+                  {isCompleted && (
+                    <div className="absolute -top-2 -right-2 w-6 h-6 bg-green-500 rounded-full flex items-center justify-center">
+                      <span className="text-white text-xs">✓</span>
+                    </div>
+                  )}
+                  
+                  {/* Loading Spinner */}
+                  {isActive && (
+                    <div className="absolute -top-2 -right-2 w-6 h-6">
+                      <Loader className="w-6 h-6 text-indigo-600 animate-spin" />
+                    </div>
+                  )}
+
+                  <div className="text-center">
+                    <div className={`text-4xl mb-3 ${isActive ? 'animate-bounce' : ''}`}>
+                      {agentInfo.icon}
+                    </div>
+                    <h4 className={`font-bold mb-1 ${isActive ? 'text-gray-900' : 'text-gray-600'}`}>
+                      {agentInfo.agent}
+                    </h4>
+                    <p className={`text-xs uppercase font-semibold ${isActive ? 'text-indigo-600' : 'text-gray-400'}`}>
+                      {agentInfo.model}
+                    </p>
+                    
+                    {isActive && (
+                      <div className="mt-3 flex justify-center gap-1">
+                        <div className="w-1.5 h-1.5 bg-indigo-600 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+                        <div className="w-1.5 h-1.5 bg-indigo-600 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+                        <div className="w-1.5 h-1.5 bg-indigo-600 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Progress Bar */}
+          <div className="relative">
+            <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
+              <div 
+                className="h-full bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 transition-all duration-500 relative"
+                style={{ 
+                  width: `${((currentDebate?.steps?.length || 0) / 4) * 100}%`,
+                }}
+              >
+                <div className="absolute inset-0 bg-white opacity-30 animate-pulse"></div>
+              </div>
+            </div>
+            <p className="text-center text-sm text-gray-600 mt-2">
+              {currentDebate?.steps?.length || 0} of 4 agents completed
+            </p>
+          </div>
         </div>
       )}
 
