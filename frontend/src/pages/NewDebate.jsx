@@ -233,94 +233,113 @@ const NewDebate = () => {
         </div>
       )}
 
-      {/* Loading Animation - Agent Pipeline */}
+      {/* ChatGPT-Style Loading Animation */}
       {isDebating && (
-        <div className="bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 border-2 border-indigo-200 rounded-2xl p-8 mb-6 shadow-xl">
-          <div className="text-center mb-8">
-            <h3 className="text-2xl font-bold text-indigo-900 mb-2">
-              Multi-Agent Debate in Progress
-            </h3>
-            <div className="flex items-center justify-center gap-2 mb-4">
-              <Clock className="w-5 h-5 text-indigo-600" />
-              <span className="text-indigo-700 font-medium">{elapsedTime}s elapsed</span>
-            </div>
-          </div>
-
-          {/* Agent Pipeline */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-            {[
-              { agent: 'Solver', model: 'mistral', icon: '🧠', color: 'indigo' },
-              { agent: 'Critic', model: 'phi3', icon: '🔍', color: 'amber' },
-              { agent: 'Refiner', model: 'llama3.1', icon: '✨', color: 'purple' },
-              { agent: 'Judge', model: 'mistral', icon: '⚖️', color: 'green' }
-            ].map((agentInfo, idx) => {
-              const isActive = currentAgent === agentInfo.agent;
-              const isCompleted = currentDebate?.steps?.some(step => step.agent === agentInfo.agent);
-              
-              return (
-                <div
-                  key={agentInfo.agent}
-                  className={`relative p-6 rounded-xl border-2 transition-all duration-500 ${
-                    isActive
-                      ? `bg-${agentInfo.color}-100 border-${agentInfo.color}-400 shadow-lg scale-105`
-                      : isCompleted
-                      ? `bg-${agentInfo.color}-50 border-${agentInfo.color}-300`
-                      : 'bg-white border-gray-200 opacity-50'
-                  }`}
-                >
-                  {/* Completion Check */}
-                  {isCompleted && (
-                    <div className="absolute -top-2 -right-2 w-6 h-6 bg-green-500 rounded-full flex items-center justify-center">
-                      <span className="text-white text-xs">✓</span>
-                    </div>
-                  )}
-                  
-                  {/* Loading Spinner */}
-                  {isActive && (
-                    <div className="absolute -top-2 -right-2 w-6 h-6">
-                      <Loader className="w-6 h-6 text-indigo-600 animate-spin" />
-                    </div>
-                  )}
-
-                  <div className="text-center">
-                    <div className={`text-4xl mb-3 ${isActive ? 'animate-bounce' : ''}`}>
-                      {agentInfo.icon}
-                    </div>
-                    <h4 className={`font-bold mb-1 ${isActive ? 'text-gray-900' : 'text-gray-600'}`}>
-                      {agentInfo.agent}
-                    </h4>
-                    <p className={`text-xs uppercase font-semibold ${isActive ? 'text-indigo-600' : 'text-gray-400'}`}>
-                      {agentInfo.model}
-                    </p>
-                    
-                    {isActive && (
-                      <div className="mt-3 flex justify-center gap-1">
-                        <div className="w-1.5 h-1.5 bg-indigo-600 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
-                        <div className="w-1.5 h-1.5 bg-indigo-600 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
-                        <div className="w-1.5 h-1.5 bg-indigo-600 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-
-          {/* Progress Bar */}
-          <div className="relative">
-            <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
-              <div 
-                className="h-full bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 transition-all duration-500 relative"
-                style={{ 
-                  width: `${((currentDebate?.steps?.length || 0) / 4) * 100}%`,
-                }}
-              >
-                <div className="absolute inset-0 bg-white opacity-30 animate-pulse"></div>
+        <div className="bg-white border border-gray-200 rounded-2xl shadow-lg mb-6 overflow-hidden">
+          {/* Header */}
+          <div className="bg-gradient-to-r from-indigo-600 to-purple-600 px-6 py-4 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center backdrop-blur-sm">
+                <Sparkles className="w-6 h-6 text-white" />
+              </div>
+              <div>
+                <h3 className="text-white font-bold text-lg">AI Agents Collaborating</h3>
+                <p className="text-indigo-100 text-sm">Multi-agent debate in progress...</p>
               </div>
             </div>
-            <p className="text-center text-sm text-gray-600 mt-2">
-              {currentDebate?.steps?.length || 0} of 4 agents completed
-            </p>
+            <div className="flex items-center gap-2 bg-white/20 px-3 py-1.5 rounded-lg backdrop-blur-sm">
+              <Clock className="w-4 h-4 text-white" />
+              <span className="text-white font-medium text-sm">{elapsedTime}s</span>
+            </div>
+          </div>
+
+          {/* Content Area */}
+          <div className="p-6 space-y-4">
+            {/* Show completed steps with typing effect */}
+            {currentDebate?.steps?.map((step, idx) => (
+              <div key={idx} className="flex gap-4 animate-fadeIn">
+                <div className="flex-shrink-0">
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center text-white font-bold shadow-lg">
+                    {AGENT_ICONS[step.agent]}
+                  </div>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="font-bold text-gray-900">{step.agent}</span>
+                    <span className="text-xs text-gray-500 uppercase font-medium">{step.model}</span>
+                    <div className="w-5 h-5 bg-green-100 rounded-full flex items-center justify-center">
+                      <span className="text-green-600 text-xs">✓</span>
+                    </div>
+                  </div>
+                  <div className="text-gray-700 leading-relaxed bg-gray-50 rounded-lg p-4 border border-gray-200">
+                    {step.output}
+                  </div>
+                </div>
+              </div>
+            ))}
+
+            {/* Current agent processing with typing animation */}
+            {currentAgent && (
+              <div className="flex gap-4 animate-fadeIn">
+                <div className="flex-shrink-0">
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center text-white font-bold shadow-lg relative">
+                    {AGENT_ICONS[currentAgent]}
+                    <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-white rounded-full flex items-center justify-center">
+                      <Loader className="w-3 h-3 text-indigo-600 animate-spin" />
+                    </div>
+                  </div>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="font-bold text-gray-900">{currentAgent}</span>
+                    <span className="text-xs text-indigo-600 uppercase font-medium animate-pulse">{loadingModel}</span>
+                  </div>
+                  <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                    <div className="flex items-center gap-2">
+                      <div className="flex gap-1">
+                        <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+                        <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+                        <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+                      </div>
+                      <span className="text-gray-500 text-sm italic">Thinking...</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Waiting agents */}
+            {isDebating && !currentDebate?.result && (
+              <div className="flex items-center gap-2 text-sm text-gray-500 pt-2">
+                <div className="flex -space-x-2">
+                  {[
+                    { agent: 'Solver', icon: '🧠' },
+                    { agent: 'Critic', icon: '🔍' },
+                    { agent: 'Refiner', icon: '✨' },
+                    { agent: 'Judge', icon: '⚖️' }
+                  ].filter(a => !currentDebate?.steps?.some(s => s.agent === a.agent) && a.agent !== currentAgent).map((agentInfo, idx) => (
+                    <div key={idx} className="w-8 h-8 rounded-full bg-gray-200 border-2 border-white flex items-center justify-center text-lg opacity-50">
+                      {agentInfo.icon}
+                    </div>
+                  ))}
+                </div>
+                <span>Waiting to process...</span>
+              </div>
+            )}
+          </div>
+
+          {/* Footer Progress */}
+          <div className="bg-gray-50 px-6 py-3 border-t border-gray-200">
+            <div className="flex items-center justify-between text-sm mb-2">
+              <span className="text-gray-600 font-medium">Progress</span>
+              <span className="text-gray-900 font-bold">{currentDebate?.steps?.length || 0} / 4 agents</span>
+            </div>
+            <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+              <div 
+                className="h-full bg-gradient-to-r from-indigo-500 to-purple-500 transition-all duration-500 ease-out"
+                style={{ width: `${((currentDebate?.steps?.length || 0) / 4) * 100}%` }}
+              ></div>
+            </div>
           </div>
         </div>
       )}
