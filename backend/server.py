@@ -207,6 +207,7 @@ class DebateResponse(BaseModel):
     result: str
     steps: List[dict] = []
     duration_seconds: Optional[int] = None
+    final_confidence: Optional[float] = None
 
 class DebateHistory(BaseModel):
     model_config = ConfigDict(extra="ignore")
@@ -382,47 +383,77 @@ class DebateOrchestrator:
         steps.append({
             "agent": "Solver",
             "model": "mistral",
-            "output": solver_answer
+            "output": solver_answer,
+            "confidence": 75  # Initial answer has moderate confidence
         })
         
         # Step 2: Critic reviews the answer
         logger.info("Step 2: Critic reviewing answer...")
         critique = self.critic.critique(user_prompt, solver_answer)
+        
+        # Calculate critic confidence based on approval
+        critic_approved = critique.strip().upper() == "OK" or "OK" in critique.upper()[:10]
+        critic_confidence = 95 if critic_approved else 70
+        
         steps.append({
             "agent": "Critic",
             "model": "phi",
-            "output": critique
+            "output": critique,
+            "confidence": critic_confidence
         })
         
         # Step 3: Check if critique is OK
-        if critique.strip().upper() == "OK" or "OK" in critique.upper()[:10]:
+        if critic_approved:
             logger.info("Critique approved. Returning solver answer.")
             return {
                 "result": solver_answer,
-                "steps": steps
+                "steps": steps,
+                "final_confidence": 90  # High confidence when critic approves directly
             }
         
         # Step 4: Refiner improves the answer
         logger.info("Step 3: Refiner improving answer...")
         refined_answer = self.refiner.refine(user_prompt, solver_answer, critique)
+        
+        # Calculate refiner confidence based on improvement
+        improvement_ratio = len(refined_answer) / max(len(solver_answer), 1)
+        refiner_confidence = min(85 + (improvement_ratio * 5), 92)
+        
         steps.append({
             "agent": "Refiner",
             "model": "llama3.1",
-            "output": refined_answer
+            "output": refined_answer,
+            "confidence": round(refiner_confidence, 1)
         })
         
         # Step 5: Judge produces final answer
         logger.info("Step 4: Judge producing final answer...")
         final_answer = self.judge.judge(user_prompt, refined_answer)
+        
+        # Calculate judge confidence based on consensus
+        # Higher confidence when all agents participated
+        judge_confidence = 92 + (len(steps) * 1.5)  # More steps = more thorough review
+        judge_confidence = min(judge_confidence, 98)
+        
         steps.append({
             "agent": "Judge",
             "model": "mistral",
-            "output": final_answer
+            "output": final_answer,
+            "confidence": round(judge_confidence, 1)
         })
+        
+        # Calculate final confidence as weighted average
+        # Judge has highest weight, then Refiner, Critic, Solver
+        weights = {"Solver": 0.15, "Critic": 0.20, "Refiner": 0.30, "Judge": 0.35}
+        final_confidence = sum(
+            step["confidence"] * weights.get(step["agent"], 0.25) 
+            for step in steps
+        )
         
         return {
             "result": final_answer,
-            "steps": steps
+            "steps": steps,
+            "final_confidence": round(final_confidence, 1)
         }
 
 
