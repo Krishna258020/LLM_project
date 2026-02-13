@@ -295,7 +295,7 @@ class SolverAgent(OllamaAgent):
     """Generates initial answer to user prompt"""
 
     def __init__(self):
-        super().__init__(model_name="phi:latest", temperature=0.7)
+        super().__init__(model_name="mistral:latest", temperature=0.7)
 
     def solve(self, user_prompt: str) -> str:
         prompt = f"""You are a helpful AI assistant. Provide a clear, concise answer.
@@ -328,7 +328,7 @@ class RefinerAgent(OllamaAgent):
     """Refines the answer based on critique"""
 
     def __init__(self):
-        super().__init__(model_name="phi:latest", temperature=0.6)
+        super().__init__(model_name="llama3.1:latest", temperature=0.6)
 
     def refine(self, user_prompt: str, solver_answer: str, critique: str) -> str:
         prompt = f"""Rewrite the answer to fix the critique.
@@ -347,7 +347,7 @@ class JudgeAgent(OllamaAgent):
     """Produces final validated answer"""
 
     def __init__(self):
-        super().__init__(model_name="phi:latest", temperature=0.5)
+        super().__init__(model_name="mistral:latest", temperature=0.5)
 
     def judge(self, user_prompt: str, refined_answer: str) -> str:
         prompt = f"""Produce a final authoritative answer.
@@ -382,7 +382,7 @@ class DebateOrchestrator:
         solver_answer = self.solver.solve(user_prompt)
         steps.append({
             "agent": "Solver",
-            "model": "mistral",
+            "model": self.solver.model_name.replace(":latest", ""),
             "output": solver_answer,
             "confidence": 75  # Initial answer has moderate confidence
         })
@@ -397,7 +397,7 @@ class DebateOrchestrator:
         
         steps.append({
             "agent": "Critic",
-            "model": "phi",
+            "model": self.critic.model_name.replace(":latest", ""),
             "output": critique,
             "confidence": critic_confidence
         })
@@ -421,25 +421,50 @@ class DebateOrchestrator:
         
         steps.append({
             "agent": "Refiner",
-            "model": "llama3.1",
+            "model": self.refiner.model_name.replace(":latest", ""),
             "output": refined_answer,
             "confidence": round(refiner_confidence, 1)
         })
         
-        # Step 5: Judge produces final answer
-        logger.info("Step 4: Judge producing final answer...")
-        final_answer = self.judge.judge(user_prompt, refined_answer)
+        # Step 5: Dynamically select Judge based on highest confidence agent
+        logger.info("Step 4: Selecting judge based on performance...")
         
-        # Calculate judge confidence based on consensus
-        # Higher confidence when all agents participated
-        judge_confidence = 92 + (len(steps) * 1.5)  # More steps = more thorough review
-        judge_confidence = min(judge_confidence, 98)
+        # Find the agent with highest confidence to be the judge
+        agent_performances = [
+            {"agent": self.solver, "name": "Solver", "confidence": 75},
+            {"agent": self.critic, "name": "Critic", "confidence": critic_confidence},
+            {"agent": self.refiner, "name": "Refiner", "confidence": refiner_confidence}
+        ]
+        
+        # Select judge: Use the model from the highest confidence agent
+        best_performer = max(agent_performances, key=lambda x: x["confidence"])
+        judge_model = best_performer["agent"].model_name
+        
+        # Create dynamic judge with best performing model
+        dynamic_judge = OllamaAgent(model_name=judge_model, temperature=0.5)
+        
+        logger.info(f"Judge selected: {judge_model} (based on {best_performer['name']}'s performance)")
+        final_answer = dynamic_judge.generate(
+            f"""Produce a final authoritative answer.
+
+Question: {user_prompt}
+
+Refined answer: {refined_answer}
+
+Final answer:""",
+            max_tokens=300
+        )
+        
+        # Calculate judge confidence based on consensus and best performer
+        # Higher confidence when judge uses best performing model
+        judge_confidence = min(best_performer["confidence"] + 5, 98)
         
         steps.append({
             "agent": "Judge",
-            "model": "mistral",
+            "model": judge_model.replace(":latest", ""),
             "output": final_answer,
-            "confidence": round(judge_confidence, 1)
+            "confidence": round(judge_confidence, 1),
+            "selected_reason": f"Selected {judge_model.replace(':latest', '')} based on {best_performer['name']}'s {best_performer['confidence']}% confidence"
         })
         
         # Calculate final confidence as weighted average
