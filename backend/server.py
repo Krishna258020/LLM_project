@@ -402,16 +402,7 @@ class DebateOrchestrator:
             "confidence": critic_confidence
         })
         
-        # Step 3: Check if critique is OK
-        if critic_approved:
-            logger.info("Critique approved. Returning solver answer.")
-            return {
-                "result": solver_answer,
-                "steps": steps,
-                "final_confidence": 90  # High confidence when critic approves directly
-            }
-        
-        # Step 4: Refiner improves the answer
+        # Step 3: Refiner improves the answer (always run for complete debate)
         logger.info("Step 3: Refiner improving answer...")
         refined_answer = self.refiner.refine(user_prompt, solver_answer, critique)
         
@@ -575,7 +566,8 @@ async def create_debate(request: DebateRequest):
         return DebateResponse(
             result=result['result'],
             steps=result['steps'],
-            duration_seconds=duration
+            duration_seconds=duration,
+            final_confidence=result.get('final_confidence')
         )
         
     except HTTPException:
